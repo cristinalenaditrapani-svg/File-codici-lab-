@@ -1,0 +1,266 @@
+import pandas as pd
+
+# Load the dataset, handling potential parsing errors
+df = pd.read_csv("dataset_totale_social(prova2).csv", low_memory=False, on_bad_lines='warn')
+
+print("--- HEAD ---")
+print(df.head())
+print("\n--- INFO ---")
+print(df.info())
+print("\n--- COLUMNS ---")
+print(df.columns.tolist())
+
+import pandas as pd
+
+df = pd.read_csv("dataset_totale_social(prova2).csv")
+
+# Let's see how columns are populated
+print("Null counts per column:")
+print(df.isnull().sum())
+
+# Let's see if Username, Author, and ID_Anonimo cover all rows
+combined_id = df['ID_Anonimo'].fillna(df['Username']).fillna(df['Author'])
+print(f"Combined ID non-null count: {combined_id.notnull().sum()} out of {len(df)}")
+
+# Let's see if timestamp, date, Date cover all rows
+combined_date = df['timestamp'].fillna(df['date']).fillna(df['Date'])
+print(f"Combined date non-null count: {combined_date.notnull().sum()} out of {len(df)}")
+
+# Let's see if likes and Likes cover all rows
+combined_likes = df['likes'].fillna(df['Likes'])
+print(f"Combined likes non-null count: {combined_likes.notnull().sum()} out of {len(df)}")
+
+import pandas as pd
+import numpy as np
+
+df = pd.read_csv("dataset_totale_social(prova2).csv")
+
+# Initialize columns in a new dataframe
+new_df = pd.DataFrame()
+
+# 1. Combine ID columns into ID_pseudonymized
+# Let's do it with a loop or clean combination to ensure rows are correctly preserved
+id_list = []
+for idx, row in df.iterrows():
+    # check ID_Anonimo, Username, Author
+    val = row['ID_Anonimo']
+    if pd.isna(val):
+        val = row['Username']
+    if pd.isna(val):
+        val = row['Author']
+    id_list.append(val)
+new_df['ID_pseudonymized'] = id_list
+
+# 2. Platform
+new_df['platform'] = df['piattaforma']
+
+# 3. Combine date columns using a for loop as requested
+date_list = []
+for idx, row in df.iterrows():
+    val = row['timestamp']
+    if pd.isna(val):
+        val = row['date']
+    if pd.isna(val):
+        val = row['Date']
+    date_list.append(val)
+new_df['date'] = date_list
+
+# 4. Text -> comments
+new_df['comments'] = df['testo_originale']
+
+# 5. Combine likes columns
+likes_list = []
+for idx, row in df.iterrows():
+    val = row['likes']
+    if pd.isna(val):
+        val = row['Likes']
+    likes_list.append(val)
+new_df['likes'] = likes_list
+
+print(new_df.head())
+print(new_df.info())
+print("Nulls in new_df:")
+print(new_df.isnull().sum())
+
+# Save to a new csv
+new_df.to_csv("dataset_standardizzato_social.csv", index=False)
+
+import pandas as pd
+import numpy as np
+
+# 1. Carichiamo il dataset totale unito (ma disordinato)
+df_grezzo = pd.read_csv("dataset_totale_social(prova2).csv")
+
+# Creiamo un nuovo DataFrame vuoto che conterrà solo le colonne richieste
+df_pulito = pd.DataFrame()
+
+# =================================================================
+# 2. STANDARDIZZAZIONE DEI CASI TRAMITE CICLI FOR
+# =================================================================
+
+# PUNTO A: Unificazione e Pseudonimizzazione degli ID
+# Combiniamo le colonne 'ID_Anonimo', 'Username' e 'Author' in un'unica colonna
+id_pseudonymized = []
+for idx, row in df_grezzo.iterrows():
+    valore_id = row['ID_Anonimo']
+    if pd.isna(valore_id):
+        valore_id = row['Username']
+    if pd.isna(valore_id):
+        valore_id = row['Author']
+    id_pseudonymized.append(valore_id)
+
+df_pulito['ID_pseudonymized'] = id_pseudonymized
+
+# PUNTO B: Rinominazione della Piattaforma
+df_pulito['platform'] = df_grezzo['piattaforma']
+
+# PUNTO C: Unificazione Temporale (timestamp, date, Date)
+# Il ciclo for analizza riga per riga per non sovrascrivere o perdere i dati originali
+date_combinate = []
+for idx, row in df_grezzo.iterrows():
+    valore_data = row['timestamp']
+    if pd.isna(valore_data):
+        valore_data = row['date']
+    if pd.isna(valore_data):
+        valore_data = row['Date']
+    date_combinate.append(valore_data)
+
+df_pulito['date'] = date_combinate
+
+# PUNTO D: Rinominazione del testo originale
+df_pulito['comments'] = df_grezzo['testo_originale']
+
+# PUNTO E: Unificazione dei "Likes" (likes, Likes)
+# Se trova nuovi dati nella colonna alternativa, li integra rispettando il caso
+likes_combinati = []
+for idx, row in df_grezzo.iterrows():
+    valore_likes = row['likes']
+    if pd.isna(valore_likes):
+        valore_likes = row['Likes']
+    likes_combinati.append(valore_likes)
+
+df_pulito['likes'] = likes_combinati
+
+# =================================================================
+# 3. ESPORTAZIONE DELLA MATRICE FINALE
+# =================================================================
+# Salviamo il file tenendo SOLO le 5 colonne richieste, senza indici aggiuntivi
+df_pulito.to_csv("dataset_standardizzato_social.csv", index=False, encoding="utf-8")
+
+print(f"Elaborazione completata con successo!")
+print(f"La nuova matrice contiene {df_pulito.shape[0]} righe e le seguenti colonne: {list(df_pulito.columns)}")
+
+import pandas as pd
+import numpy as np
+import re
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
+# 1. Carichiamo il dataset totale unito (ma disordinato)
+df_grezzo = pd.read_csv("dataset_totale_social(prova2).csv", low_memory=False)
+
+# Creiamo un nuovo DataFrame vuoto che conterrà solo le 5 colonne richieste
+df_pulito = pd.DataFrame()
+
+
+# =================================================================
+# FUNZIONE DI SUPPORTO PER LA STANDARDIZZAZIONE DELLE DATE DI YT
+# =================================================================
+def calcola_data_assoluta(valore_data):
+    if pd.isna(valore_data):
+        return np.nan
+
+    valore_str = str(valore_data).strip().lower()
+
+    # Se è già una data standard YYYY-MM-DD (es. IG o TikTok), estrae i primi 10 caratteri
+    if re.match(r'^\d{4}-\d{2}-\d{2}', valore_str):
+        return valore_str[:10]
+
+    # Data di ancoraggio basata sul momento dell'estrazione (Giugno 2026)
+    data_odierna = datetime(2026, 6, 4)
+
+    # Intercettiamo i pattern classici di YouTube: "X years ago", "X months ago", ecc.
+    match = re.search(r'(\d+)\s+(year|month|week|day|hour)', valore_str)
+
+    if match:
+        quantita = int(match.group(1))
+        unita = match.group(2)
+
+        if 'year' in unita:
+            data_stimata = data_odierna - relativedelta(years=quantita)
+        elif 'month' in unita:
+            data_stimata = data_odierna - relativedelta(months=quantita)
+        elif 'week' in unita:
+            data_stimata = data_odierna - relativedelta(weeks=quantita)
+        elif 'day' in unita:
+            data_stimata = data_odierna - relativedelta(days=quantita)
+        elif 'hour' in unita:
+            data_stimata = data_odierna - relativedelta(hours=quantita)
+
+        return data_stimata.strftime('%Y-%m-%d')
+
+    # Approssimazione per commenti inseriti pochissimo prima dello scraping
+    if 'now' in valore_str or 'just' in valore_str:
+        return data_odierna.strftime('%Y-%m-%d')
+
+    return valore_str
+
+
+# =================================================================
+# 2. STANDARDIZZAZIONE DEI CASI TRAMITE CICLI FOR
+# =================================================================
+
+# PUNTO A: Unificazione e Pseudonimizzazione degli ID
+id_pseudonymized = []
+for idx, row in df_grezzo.iterrows():
+    valore_id = row['ID_Anonimo']
+    if pd.isna(valore_id):
+        valore_id = row['Username']
+    if pd.isna(valore_id):
+        valore_id = row['Author']
+    id_pseudonymized.append(valore_id)
+
+df_pulito['ID_pseudonymized'] = id_pseudonymized
+
+# PUNTO B: Rinominazione della Piattaforma
+df_pulito['platform'] = df_grezzo['piattaforma']
+
+# PUNTO C: Unificazione Temporale e Conversione Date Relative (YouTube)
+# Il ciclo estrae il metatesto temporale e lo passa alla funzione di calcolo a ritroso
+date_combinate = []
+for idx, row in df_grezzo.iterrows():
+    valore_data = row['timestamp']
+    if pd.isna(valore_data):
+        valore_data = row['date']
+    if pd.isna(valore_data):
+        valore_data = row['Date']
+
+    # Standardizziamo la stringa temporale prima di appenderla
+    data_standard = calcola_data_assoluta(valore_data)
+    date_combinate.append(data_standard)
+
+df_pulito['date'] = date_combinate
+
+# PUNTO D: Rinominazione del testo originale in "comments"
+df_pulito['comments'] = df_grezzo['testo_originale']
+
+# PUNTO E: Unificazione dei "Likes" (likes, Likes)
+likes_combinati = []
+for idx, row in df_grezzo.iterrows():
+    valore_likes = row['likes']
+    if pd.isna(valore_likes):
+        valore_likes = row['Likes']
+    likes_combinati.append(valore_likes)
+
+df_pulito['likes'] = likes_combinati
+
+# Convertiamo la colonna 'date' da testo (str) a oggetto temporale (datetime)
+df_pulito['date'] = pd.to_datetime(df_pulito['date'], errors='coerce')
+
+print(df_pulito['date'].dtypes)
+
+# 1. TRASFORMA LA MATRICE PULITA IN UN FILE CSV
+df_pulito.to_csv("dataset_standardizzato_social.csv", index=False, encoding="utf-8")
+
+from google.colab import files
+files.download("dataset_standardizzato_social.csv")
